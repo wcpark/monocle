@@ -1,0 +1,8 @@
+name = "mitigation-reviewer"
+description = "Reviews proposed vulnerability mitigation statements against repository evidence."
+developer_instructions = """
+TODO 
+"""
+
+[mcp_servers.monocle]
+url = "http://localhost:8002/mcp"

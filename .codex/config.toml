@@ -1,0 +1,11 @@
+[mcp_servers.monocle]
+url = "http://localhost:8002/mcp"
+
+[mcp_servers.monocle.tools.list_records]
+approval_mode = "approve"
+
+[mcp_servers.monocle.tools.get_record]
+approval_mode = "approve"
+
+[mcp_servers.monocle.tools.delete_record]
+approval_mode = "approve"
