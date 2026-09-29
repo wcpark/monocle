@@ -65,9 +65,16 @@ docker compose --profile all down
 | `list_components` | Lists each component's deployment context, mitigated findings by scanner, and skipped scans. |
 | `get_mitigations` | Returns a component's mitigations for one scanner, with any formatting problems. |
 
-## Policies
+## Guardrails
 
-Every tool call passes through two Agent Governance Toolkit (AGT) layers:
+Enforced by monocle:
 
-- `src/gateway-policy.yaml` allows only the listed tools and blocks config paths that leave the workspace or do not name a cDSO config. The tools also resolve each path and reject symlinks that leave the workspace.
-- `src/policy.yaml` limits each config tool to 600 calls per hour, and contains rules for a future tool that writes corrected statements back to a config.
+- **Read-only access.** The tools cannot write, run commands, or reach the network. The container runs as a non-root user and mounts only the reviewed repository, read-only.
+- **Path checks.** The tools resolve each path and reject files outside the repository, files that are not cDSO configs, and symlinks that leave the repository. Configs are parsed with `yaml.safe_load`.
+- **`src/gateway-policy.yaml`** (Agent Governance Toolkit MCP gateway) allows only the listed tools and blocks `..`, absolute, and non-config paths in tool arguments.
+- **`src/policy.yaml`** (Agent Governance Toolkit) limits each config tool to 600 calls per hour. It also denies removals and requires human approval for a future tool that writes corrected statements back to a config.
+
+Not enforced:
+
+- **The agent's own actions.** Commands the agent runs in its shell are governed by the agent's sandbox and approval settings, not by monocle.
+- **Audit history.** Tool calls are audited in memory only, and the record is lost when the container restarts.
