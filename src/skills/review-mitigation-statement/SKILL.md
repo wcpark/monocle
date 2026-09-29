@@ -10,7 +10,7 @@ Decide whether each mitigation in a cDSO config is true for the component it cov
 ## Workflow
 
 1. Call the monocle `find_cdso_configs` tool, then `list_components` on the config to review. It lists each component's findings by scanner and any `skip_reasons` for scans that did not run.
-2. Pick the component and scanner, then call `get_mitigations` with `scanner` set to `grype`, `zap`, `semgrep`, `hadolint`, or `container_spec`. Request about 20 findings at a time.
+2. Review every component in the config and every scanner that has findings for it, unless the user names specific components, scanners, or findings. For each one, call `get_mitigations` with `scanner` set to `grype`, `zap`, `semgrep`, `hadolint`, or `container_spec`, and request about 20 findings at a time.
 3. For each mitigation:
    1. Identify what the finding actually flags: the advisory, ZAP alert, semgrep rule, or hadolint rule. Grype and ZAP statements include a DESCRIPTION; check that it matches the finding ID.
    2. Split the mitigation into its individual claims, such as "not imported", "build time only", "no XML input", or "Istio enforces mTLS".
@@ -112,7 +112,7 @@ For Grype findings, use the justification categories in the `write-vex-statement
 
 ## Report Format
 
-Start with a summary table for each scanner reviewed, then give details only for findings that are not `supported`:
+Start with a summary table for each component and scanner reviewed, then give details only for findings that are not `supported`:
 
 ```markdown
 | Finding | Verdict | Reason |
