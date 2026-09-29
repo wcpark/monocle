@@ -1,0 +1,30 @@
+---
+# MCP gateway policy, enforced by agent_os.mcp_gateway before each tool call.
+# Blocked patterns are searched in the tool arguments serialized as JSON, such
+# as {"config_path": "../etc/cdso_config.yml"}, so they match the quotes around
+# each value. The tools also resolve every path and reject anything outside
+# the workspace, which catches symlinks that these text patterns cannot.
+name: monocle-gateway-policy
+version: "1.0.0"
+
+# New tools must be added here before agents can call them.
+allowed_tools:
+  - find_cdso_configs
+  - list_components
+  - get_mitigations
+
+blocked_patterns:
+  # Parent-directory segments, such as "../cdso_config.yml" or "a/../b".
+  - pattern: '["/]\.\.([/"]|$)'
+    type: regex
+  # Absolute config paths.
+  - pattern: '"config_path": *"/'
+    type: regex
+  # Config paths that do not name a cDSO config file.
+  - pattern: '(?i)"config_path": *"(?![^"]*cdso_config[\w.-]*\.ya?ml")'
+    type: regex
+
+# The gateway counts calls per agent for the life of the server and never
+# resets the count, and every client shares one agent ID. A small limit would
+# stop the server for everyone, so this is set high enough not to be reached.
+max_tool_calls: 1000000

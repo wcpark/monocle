@@ -7,8 +7,14 @@ services:
     container_name: monocle_mcp
     ports:
       - "8002:8002"
+    env_file:
+      - path: src/.env
+        required: false
     environment:
       FASTMCP_PORT: "8002"
+      MONOCLE_WORKSPACE: /workspace
+    volumes:
+      - ${MCP_SERVER_WORKSPACE:-.}:/workspace:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8002/api/v1/health > /dev/null || exit 1"]
       interval: 10s

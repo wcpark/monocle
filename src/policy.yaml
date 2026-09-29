@@ -1,9 +1,37 @@
 ---
 apiVersion: governance.toolkit/v1
-name: default-security-policy
+name: monocle-review-policy
 default_action: allow
+# Rule conditions can only compare tool argument values exactly, and each tool
+# is checked by its own policy engine. Path checks live in gateway-policy.yaml
+# and in the tools, because conditions cannot match patterns.
 rules:
-  - name: deny-deletion-of-observation-003
-    condition: "record_id.value == 'observation-003'"
+  # Stop a runaway agent from calling a tool in a loop. The limit counts calls
+  # to each tool separately, resets every hour, and is shared by every client.
+  # find_cdso_configs takes no arguments, so no rule can match it.
+  - name: limit-config-access
+    condition: "config_path.value"
+    action: allow
+    limit: "600/hour"
+    description: "Each config tool allows 600 calls per hour."
+
+  # The rules below are for a future tool that writes corrected statements
+  # back to a cDSO config. They match no current tool. The write tool must:
+  #   - take its target as `config_path`, so the gateway's cDSO config path
+  #     rules apply to it;
+  #   - take a required `operation` argument of "add", "replace", or "remove",
+  #     and reject any other value itself, because a missing or empty
+  #     operation matches none of these rules;
+  #   - be added to allowed_tools in gateway-policy.yaml before it can run.
+  - name: deny-mitigation-removal
+    condition: "operation.value == 'remove'"
     action: deny
-    description: "Deleting observation 003 is not allowed."
+    description: "Removing a mitigation from a cDSO config is not allowed."
+
+  # Without an approval handler passed to govern() in main.py, AGT rejects
+  # every approval request, so writes stay blocked until one is added.
+  - name: require-approval-for-mitigation-writes
+    condition: "operation.value"
+    action: require_approval
+    priority: 10
+    description: "A human must approve every change to a cDSO config."

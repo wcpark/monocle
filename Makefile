@@ -69,7 +69,7 @@ lock:
 .SILENT: check
 check:
 	echo "[*] Checking monocle's source code quality"
-	ruff check --fix $(BUILD_CONTEXT)
+	ruff check --fix $(BUILD_CONTEXT) tests
 
 # ---------------------------------------------------------
 # Format the source code.
@@ -79,7 +79,7 @@ check:
 .SILENT: format
 format:
 	echo "[*] Formatting monocle's source code"
-	ruff format $(BUILD_CONTEXT)
+	ruff format $(BUILD_CONTEXT) tests
 
 # ---------------------------------------------------------
 # Check the repository for secrets.

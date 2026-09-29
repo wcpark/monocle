@@ -91,4 +91,4 @@ jobs:
         run: cp src/.env.example src/.env
 
       - name: Run CI Pipeline
-        run: make tests
+        run: make test-container

@@ -1,0 +1,42 @@
+organization: expedition-0
+security_group: ai2c
+deployment_level: DEVELOPMENT
+sdd_path: docs/sdd.md
+
+sample_allowed_sources: &sample_allowed_sources
+  # The builder image compiles the service and is not shipped.
+  - "registry.example/sample/builder:v1.0.0"
+
+sample_semgrep_exclusions: &sample_semgrep_exclusions
+  # Compose files are only used for local development.
+  - "app.rules.community.yaml.docker-compose.security.no-new-privileges"
+
+  # File: services/sample/tools/gen.py:12
+  # Rule:
+  #   app.rules.community.python.lang.security.audit.dangerous-subprocess-use-audit
+  - app.rules.community.python.lang.maintainability.is-function-without-parentheses
+  # Justification: The command is fixed and runs only at build time.
+
+sample_service:
+  project_type: "container"
+  version: "v0.1.0"
+  dockerfile_folder: "services/sample"
+  build_context: "."
+  container_lifespan: "PERSISTENT"
+  connection_context: "EXTERNAL"
+  mitigations:
+    - CVE-0000-0001: "DESCRIPTION: A sample flaw in libsample XML parsing. MITIGATION: This container does not accept XML input. Therefore, this is not applicable."
+    - CVE-0000-0002: "DESCRIPTION: A sample flaw in a Windows path check. MITIGAION: The container runs on Linux. Therefore, this is not applicable."
+    - CVE-0000-0003: "DESCRIPTION: A sample flaw with no mitigation label."
+  zap:
+    mitigations:
+      ZAP_00001: >-
+        "DESCRIPTION: A sample header finding. MITIGATION: The header is set by the ingress gateway."
+  semgrep:
+    exclusions: *sample_semgrep_exclusions
+  hadolint:
+    ignores:
+      - DL3008 # Pinned by the approved base image.
+  container_spec:
+    allow_from_sources: *sample_allowed_sources
+    non_minimized: "The service needs glibc for its native libraries."
