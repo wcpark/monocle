@@ -1,60 +1,105 @@
 # `monocle`
 [![CI Pipeline](https://github.com/wcpark/monocle/actions/workflows/ci.yml/badge.svg)](https://github.com/wcpark/monocle/actions/workflows/ci.yml)  
 
-Monocle is an MCP server that exposes tools and skills that agents can use to review and validate proposed vulnerability mitigation statements.
+Monocle is a Python MCP server with Microsoft's [Agent Governance Toolkit (AGT)](https://github.com/microsoft/agent-governance-toolkit) built in. It exposes tools and a skill that agents use to review the vulnerability mitigation statements in a tenant repository's cDSO config (`cdso_config.yml`) and correct the ones that are not true. It covers Grype and ZAP mitigations, semgrep exclusions, hadolint ignores, and `container_spec` base-image exceptions.
 
-It reads the mitigations in a tenant repository's cDSO config (`cdso_config.yml`) and serves the `review-mitigation-statement` skill, which tells an agent how to decide whether each mitigation is true and how to correct the ones that are not. It covers Grype and ZAP mitigations, semgrep exclusions, hadolint ignores, and `container_spec` base-image exceptions.
+Monocle was created from the [cookiecutter-fastmcp](https://github.com/deathlabs/cookiecutter-fastmcp) template.
 
-## Usage
+## Prerequisites
 
-### 1. Clone the repository to review
+The instructions below assume you are using VS Code and OpenAI's Codex agent, and that you have the following software installed:
 
-```sh
+- [Make](https://www.gnu.org/software/make/)
+- [Docker](https://docs.docker.com/get-started/get-docker/)
+- [uv](https://docs.astral.sh/uv/)
+- [Ruff](https://docs.astral.sh/ruff/)
+- [Semgrep](https://semgrep.dev/)
+- [TruffleHog](https://github.com/trufflesecurity/trufflehog)
+- [Hadolint](https://github.com/hadolint/hadolint)
+- [Syft](https://github.com/anchore/syft#installation)
+- [Grype](https://github.com/anchore/grype#installation)
+- [yq](https://github.com/mikefarah/yq)
+- [VS Code](https://code.visualstudio.com/)
+- [VS Code Extension for Codex](https://marketplace.visualstudio.com/items?itemName=openai.chatgpt)
+
+## Quickstart
+
+### 1. Clone monocle
+
+```bash
+git clone https://github.com/wcpark/monocle.git
+cd monocle
+```
+
+### 2. Clone the repository to review
+
+```bash
 git clone <tenant-repo-url> ~/repos/tenant-app
 ```
 
-### 2. Start monocle against that repository
+### 3. Start monocle against that repository
 
-From this repository:
+From the monocle folder, build, scan, and start monocle against the repository you cloned.
 
-```sh
-MCP_SERVER_WORKSPACE=~/repos/tenant-app docker compose --profile all up -d --build
+```bash
+make WORKSPACE=$HOME/repos/tenant-app start-container
 ```
 
-The server listens at `http://localhost:8002/mcp` and mounts the tenant repository read-only. It serves one repository at a time. To switch, run `docker compose --profile all down` and start it again with the new path.
+To review a different repository later, run this again with its path.
 
-To run the full scan chain before starting the server, use `make WORKSPACE=~/repos/tenant-app start-container` instead. This requires uv, Ruff, TruffleHog, Hadolint, Semgrep, Syft, Grype, and yq.
+### 4. Watch the logs (optional)
 
-### 3. Connect an agent
+Watch the MCP server's logs to see each tool call and any policy denials.
 
-Run the agent from inside the tenant repository, so it can search the code and run checks.
-
-For Codex, add the server to your user-level `~/.codex/config.toml`. The copy in this repository's `.codex/config.toml` applies only when Codex runs inside this repository.
-
-```toml
-[mcp_servers.monocle]
-url = "http://localhost:8002/mcp"
+```bash
+docker logs monocle_mcp -f
 ```
 
-Any other MCP client that supports streamable HTTP can connect to the same URL.
+### 5. Install the agent
 
-### 4. Ask for a review
+From the monocle folder, copy the `mitigation-reviewer` agent to your personal Codex agents folder, so you can use it from any repository. You only need to do this once.
 
-```text
-Read the monocle review-mitigation-statement skill and follow it. Review the
-mitigations in cdso_config.yml.
+```bash
+mkdir -p ~/.codex/agents
+cp .codex/agents/mitigation-reviewer.toml ~/.codex/agents/
 ```
 
-By default, the agent reviews every component in the config and every mitigation type: Grype, ZAP, semgrep, hadolint, and container_spec. To narrow the review, name what you want, for example "only the Grype mitigations for the backend component".
+### 6. Open the repository in VS Code
+
+```bash
+code ~/repos/tenant-app
+```
+
+### 7. Ask for a review
+
+Enter this prompt into the Codex extension.
+
+> Have @mitigation-reviewer review the mitigations in cdso_config.yml.
+
+By default, the agent reviews every component in the config and every mitigation type. To narrow the review, name what you want, for example "only the Grype mitigations for the backend component".
 
 The agent reports a verdict for each mitigation (`supported`, `needs revision`, `not supported`, or `unverified`), the evidence behind it, and corrected statements in cDSO format that can be pasted back into the config. Build the component's container image first so the agent can check what is installed in it. Otherwise, it writes `check-<finding>.sh` scripts for you to run.
 
-To try monocle without a tenant repository, start it against this repository and review `tests/fixtures/cdso_config.yml`.
+### Try It Without a Tenant Repository
 
-### 5. Stop monocle
+Run `make` in the monocle folder to build, scan, start, and test monocle against its own sample config. Then open the monocle folder in VS Code and enter this prompt.
 
-```sh
+> Have @mitigation-reviewer review the mitigations in tests/fixtures/cdso_config.yml.
+
+## Cleaning Up
+
+To stop the MCP server and remove its container and network, enter the command below. This keeps the container image, so monocle starts faster next time. Add `--rmi all` to delete the image too.
+
+```bash
 docker compose --profile all down
+```
+
+Alternatively, to stop the MCP server and delete its container image with the Makefile, enter the commands below.
+
+```bash
+make stop-container
+make remove-container
+make remove-container-image
 ```
 
 ## Tools
