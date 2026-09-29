@@ -88,7 +88,13 @@ Run `make` in the monocle folder to build, scan, start, and test monocle against
 
 ## Cleaning Up
 
-To stop the MCP server and delete its container image, enter the commands below.
+To stop the MCP server and remove its container and network, enter the command below. This keeps the container image, so monocle starts faster next time. Add `--rmi all` to delete the image too.
+
+```bash
+docker compose --profile all down
+```
+
+Alternatively, to stop the MCP server and delete its container image with the Makefile, enter the commands below.
 
 ```bash
 make stop-container
