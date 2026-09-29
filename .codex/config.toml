@@ -1,11 +1,11 @@
 [mcp_servers.monocle]
 url = "http://localhost:8002/mcp"
 
-[mcp_servers.monocle.tools.list_records]
+[mcp_servers.monocle.tools.find_cdso_configs]
 approval_mode = "approve"
 
-[mcp_servers.monocle.tools.get_record]
+[mcp_servers.monocle.tools.list_components]
 approval_mode = "approve"
 
-[mcp_servers.monocle.tools.delete_record]
+[mcp_servers.monocle.tools.get_mitigations]
 approval_mode = "approve"

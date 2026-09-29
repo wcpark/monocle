@@ -1,7 +1,9 @@
-from .tools import delete_record, get_record, list_records
+"""Tools registered with the Monocle MCP server."""
+
+from .tools import find_cdso_configs, get_mitigations, list_components
 
 TOOLS = [
-    delete_record,
-    get_record,
-    list_records,
+    find_cdso_configs,
+    get_mitigations,
+    list_components,
 ]

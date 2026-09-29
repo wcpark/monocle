@@ -6,4 +6,11 @@ dependencies = [
     "agent-governance-toolkit-core",
     "defusedxml",
     "fastmcp",
+    "pyyaml",
 ]
+
+[tool.ruff.lint]
+extend-select = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
