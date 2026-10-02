@@ -12,15 +12,10 @@ The instructions below assume you are using VS Code and OpenAI's Codex agent, an
 - [Make](https://www.gnu.org/software/make/)
 - [Docker](https://docs.docker.com/get-started/get-docker/)
 - [uv](https://docs.astral.sh/uv/)
-- [Ruff](https://docs.astral.sh/ruff/)
-- [Semgrep](https://semgrep.dev/)
-- [TruffleHog](https://github.com/trufflesecurity/trufflehog)
-- [Hadolint](https://github.com/hadolint/hadolint)
-- [Syft](https://github.com/anchore/syft#installation)
-- [Grype](https://github.com/anchore/grype#installation)
-- [yq](https://github.com/mikefarah/yq)
 - [VS Code](https://code.visualstudio.com/)
 - [VS Code Extension for Codex](https://marketplace.visualstudio.com/items?itemName=openai.chatgpt)
+
+Monocle's build also scans itself with [Ruff](https://docs.astral.sh/ruff/), [Semgrep](https://semgrep.dev/), [TruffleHog](https://github.com/trufflesecurity/trufflehog), [Hadolint](https://github.com/hadolint/hadolint), [Syft](https://github.com/anchore/syft), [Grype](https://github.com/anchore/grype), and [yq](https://github.com/mikefarah/yq). Step 2 installs them.
 
 ## Quickstart
 
@@ -31,13 +26,23 @@ git clone https://github.com/wcpark/monocle.git
 cd monocle
 ```
 
-### 2. Clone the repository to review
+### 2. Install the scanners
+
+Install the scanners to `~/.local/bin`, at the versions CI uses. This verifies each download against its published checksum, and runs on Linux x86_64 only. You only need to do this once.
+
+```bash
+make install-tools
+```
+
+If `~/.local/bin` is not on your `PATH`, add it.
+
+### 3. Clone the repository to review
 
 ```bash
 git clone <tenant-repo-url> ~/repos/tenant-app
 ```
 
-### 3. Start monocle against that repository
+### 4. Start monocle against that repository
 
 From the monocle folder, build, scan, and start monocle against the repository you cloned.
 
@@ -47,7 +52,7 @@ make WORKSPACE=$HOME/repos/tenant-app start-container
 
 To review a different repository later, run this again with its path.
 
-### 4. Watch the logs (optional)
+### 5. Watch the logs (optional)
 
 Watch the MCP server's logs to see each tool call and any policy denials.
 
@@ -55,7 +60,7 @@ Watch the MCP server's logs to see each tool call and any policy denials.
 docker logs monocle_mcp -f
 ```
 
-### 5. Install the agent
+### 6. Install the agent
 
 From the monocle folder, copy the `mitigation-reviewer` agent to your personal Codex agents folder, so you can use it from any repository. You only need to do this once.
 
@@ -64,13 +69,13 @@ mkdir -p ~/.codex/agents
 cp .codex/agents/mitigation-reviewer.toml ~/.codex/agents/
 ```
 
-### 6. Open the repository in VS Code
+### 7. Open the repository in VS Code
 
 ```bash
 code ~/repos/tenant-app
 ```
 
-### 7. Ask for a review
+### 8. Ask for a review
 
 Enter this prompt into the Codex extension.
 
