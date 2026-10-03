@@ -11,11 +11,8 @@ The instructions below assume you are using VS Code and OpenAI's Codex agent, an
 
 - [Make](https://www.gnu.org/software/make/)
 - [Docker](https://docs.docker.com/get-started/get-docker/)
-- [uv](https://docs.astral.sh/uv/)
 - [VS Code](https://code.visualstudio.com/)
 - [VS Code Extension for Codex](https://marketplace.visualstudio.com/items?itemName=openai.chatgpt)
-
-Monocle's build also scans itself with [Ruff](https://docs.astral.sh/ruff/), [Semgrep](https://semgrep.dev/), [TruffleHog](https://github.com/trufflesecurity/trufflehog), [Hadolint](https://github.com/hadolint/hadolint), [Syft](https://github.com/anchore/syft), [Grype](https://github.com/anchore/grype), and [yq](https://github.com/mikefarah/yq). Step 2 installs them.
 
 ## Quickstart
 
@@ -26,33 +23,23 @@ git clone https://github.com/wcpark/monocle.git
 cd monocle
 ```
 
-### 2. Install the scanners
-
-Install the scanners to `~/.local/bin`, at the versions CI uses. This verifies each download against its published checksum, and runs on Linux x86_64 only. You only need to do this once.
-
-```bash
-make install-tools
-```
-
-If `~/.local/bin` is not on your `PATH`, add it.
-
-### 3. Clone the repository to review
+### 2. Clone the repository to review
 
 ```bash
 git clone <tenant-repo-url> ~/repos/tenant-app
 ```
 
-### 4. Start monocle against that repository
+### 3. Start monocle against that repository
 
-From the monocle folder, build, scan, and start monocle against the repository you cloned.
+From the monocle folder, build and start monocle against the repository you cloned.
 
 ```bash
-make WORKSPACE=$HOME/repos/tenant-app start-container
+make run WORKSPACE=$HOME/repos/tenant-app
 ```
 
 To review a different repository later, run this again with its path.
 
-### 5. Watch the logs (optional)
+### 4. Watch the logs (optional)
 
 Watch the MCP server's logs to see each tool call and any policy denials.
 
@@ -60,7 +47,7 @@ Watch the MCP server's logs to see each tool call and any policy denials.
 docker logs monocle_mcp -f
 ```
 
-### 6. Install the agent
+### 5. Install the agent
 
 From the monocle folder, copy the `mitigation-reviewer` agent to your personal Codex agents folder, so you can use it from any repository. You only need to do this once.
 
@@ -69,13 +56,13 @@ mkdir -p ~/.codex/agents
 cp .codex/agents/mitigation-reviewer.toml ~/.codex/agents/
 ```
 
-### 7. Open the repository in VS Code
+### 6. Open the repository in VS Code
 
 ```bash
 code ~/repos/tenant-app
 ```
 
-### 8. Ask for a review
+### 7. Ask for a review
 
 Enter this prompt into the Codex extension.
 
@@ -87,7 +74,7 @@ The agent reports a verdict for each mitigation (`supported`, `needs revision`, 
 
 ### Try It Without a Tenant Repository
 
-Run `make` in the monocle folder to build, scan, start, and test monocle against its own sample config. Then open the monocle folder in VS Code and enter this prompt.
+Run `make run` in the monocle folder to start monocle against its own sample config. Then open the monocle folder in VS Code and enter this prompt.
 
 > Have @mitigation-reviewer review the mitigations in tests/fixtures/cdso_config.yml.
 
@@ -105,6 +92,28 @@ Alternatively, to stop the MCP server and delete its container image with the Ma
 make stop-container
 make remove-container
 make remove-container-image
+```
+
+## Development
+
+`make run` starts monocle without checking it. When you change monocle, use the full pipeline instead. It lints and formats the code, scans it and the container image, then starts monocle and tests it. CI runs the same pipeline.
+
+The pipeline also needs [uv](https://docs.astral.sh/uv/), [Ruff](https://docs.astral.sh/ruff/), [Semgrep](https://semgrep.dev/), [TruffleHog](https://github.com/trufflesecurity/trufflehog), [Hadolint](https://github.com/hadolint/hadolint), [Syft](https://github.com/anchore/syft), [Grype](https://github.com/anchore/grype), and [yq](https://github.com/mikefarah/yq). Install uv yourself, then install the rest to `~/.local/bin` at the versions CI uses. This verifies each download against its published checksum, and runs on Linux x86_64 only.
+
+```bash
+make install-tools
+```
+
+If `~/.local/bin` is not on your `PATH`, add it. Then run the pipeline against monocle's own sample config.
+
+```bash
+make
+```
+
+To run the scans and then start monocle against another repository, without the tests, enter the command below.
+
+```bash
+make WORKSPACE=$HOME/repos/tenant-app start-container
 ```
 
 ## Tools

@@ -266,6 +266,16 @@ start-container: validate-workspace dependency-scan
 	docker compose --profile $(DOCKER_COMPOSE_PROFILE) up -d
 
 # ---------------------------------------------------------
+# Build and start the container without running the scans.
+# ---------------------------------------------------------
+
+.PHONY: run
+.SILENT: run
+run: validate-workspace
+	echo "[*] Starting monocle against $(MCP_SERVER_WORKSPACE) without scans"
+	docker compose --profile $(DOCKER_COMPOSE_PROFILE) up -d --build
+
+# ---------------------------------------------------------
 # Check the status of the container.
 # ---------------------------------------------------------
 
