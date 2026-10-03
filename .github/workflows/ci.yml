@@ -47,45 +47,10 @@ jobs:
         with:
           version: latest-known
 
-      - name: Install Python Tools
+      - name: Install Tools
         run: |
-          uv tool install ruff
-          uv tool install semgrep
+          make install-tools
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install yq
-        run: |
-          sudo wget \
-            https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64 \
-            -O /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq
-
-      - name: Install TruffleHog
-        run: |
-          curl -sSfL \
-            https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-            | sudo sh -s -- -b /usr/local/bin v3.97.5
-
-      - name: Install Hadolint
-        run: |
-          sudo wget \
-            https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64 \
-            -O /usr/local/bin/hadolint
-          sudo chmod +x /usr/local/bin/hadolint
-
-      - name: Install Syft
-        id: syft
-        uses: anchore/sbom-action/download-syft@v0.24.0
-
-      - name: Add Syft to PATH
-        run: echo "$(dirname '${{ steps.syft.outputs.cmd }}')" >> "$GITHUB_PATH"
-
-      - name: Install Grype
-        id: grype
-        uses: anchore/scan-action/download-grype@v7.4.0
-
-      - name: Add Grype to PATH
-        run: echo "$(dirname '${{ steps.grype.outputs.cmd }}')" >> "$GITHUB_PATH"
 
       - name: Configure Environment
         run: cp src/.env.example src/.env

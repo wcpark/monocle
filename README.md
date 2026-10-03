@@ -11,14 +11,6 @@ The instructions below assume you are using VS Code and OpenAI's Codex agent, an
 
 - [Make](https://www.gnu.org/software/make/)
 - [Docker](https://docs.docker.com/get-started/get-docker/)
-- [uv](https://docs.astral.sh/uv/)
-- [Ruff](https://docs.astral.sh/ruff/)
-- [Semgrep](https://semgrep.dev/)
-- [TruffleHog](https://github.com/trufflesecurity/trufflehog)
-- [Hadolint](https://github.com/hadolint/hadolint)
-- [Syft](https://github.com/anchore/syft#installation)
-- [Grype](https://github.com/anchore/grype#installation)
-- [yq](https://github.com/mikefarah/yq)
 - [VS Code](https://code.visualstudio.com/)
 - [VS Code Extension for Codex](https://marketplace.visualstudio.com/items?itemName=openai.chatgpt)
 
@@ -39,10 +31,10 @@ git clone <tenant-repo-url> ~/repos/tenant-app
 
 ### 3. Start monocle against that repository
 
-From the monocle folder, build, scan, and start monocle against the repository you cloned.
+From the monocle folder, build and start monocle against the repository you cloned.
 
 ```bash
-make WORKSPACE=$HOME/repos/tenant-app start-container
+make run WORKSPACE=$HOME/repos/tenant-app
 ```
 
 To review a different repository later, run this again with its path.
@@ -82,7 +74,7 @@ The agent reports a verdict for each mitigation (`supported`, `needs revision`, 
 
 ### Try It Without a Tenant Repository
 
-Run `make` in the monocle folder to build, scan, start, and test monocle against its own sample config. Then open the monocle folder in VS Code and enter this prompt.
+Run `make run` in the monocle folder to start monocle against its own sample config. Then open the monocle folder in VS Code and enter this prompt.
 
 > Have @mitigation-reviewer review the mitigations in tests/fixtures/cdso_config.yml.
 
@@ -100,6 +92,28 @@ Alternatively, to stop the MCP server and delete its container image with the Ma
 make stop-container
 make remove-container
 make remove-container-image
+```
+
+## Development
+
+`make run` starts monocle without checking it. When you change monocle, use the full pipeline instead. It lints and formats the code, scans it and the container image, then starts monocle and tests it. CI runs the same pipeline.
+
+The pipeline also needs [uv](https://docs.astral.sh/uv/), [Ruff](https://docs.astral.sh/ruff/), [Semgrep](https://semgrep.dev/), [TruffleHog](https://github.com/trufflesecurity/trufflehog), [Hadolint](https://github.com/hadolint/hadolint), [Syft](https://github.com/anchore/syft), [Grype](https://github.com/anchore/grype), and [yq](https://github.com/mikefarah/yq). Install uv yourself, then install the rest to `~/.local/bin` at the versions CI uses. This verifies each download against its published checksum, and runs on Linux x86_64 only.
+
+```bash
+make install-tools
+```
+
+If `~/.local/bin` is not on your `PATH`, add it. Then run the pipeline against monocle's own sample config.
+
+```bash
+make
+```
+
+To run the scans and then start monocle against another repository, without the tests, enter the command below.
+
+```bash
+make WORKSPACE=$HOME/repos/tenant-app start-container
 ```
 
 ## Tools
