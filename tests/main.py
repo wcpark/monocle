@@ -203,6 +203,21 @@ async def main() -> None:
             f" {GREEN}✔{RESET} The {SERVER} parsed hadolint and base-image exceptions"
         )
 
+        # Test 12: the server must refuse to return too many findings at once.
+        result = await client.call_tool(
+            "get_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "component": FIXTURE_COMPONENT,
+                "finding_ids": [f"CVE-0000-{number:04}" for number in range(21)],
+            },
+            raise_on_error=False,
+        )
+        batch_error = f"The {SERVER} returned more than 20 findings in one call."
+        assert result.is_error, batch_error
+        assert "batches of at most 20" in result.content[0].text, batch_error
+        print(f" {GREEN}✔{RESET} The {SERVER} refused an oversized batch")
+
     print(f"[+] The {SERVER} is up-up")
 
 

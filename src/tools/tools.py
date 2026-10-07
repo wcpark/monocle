@@ -13,6 +13,7 @@ WORKSPACE = Path(environ.get("MONOCLE_WORKSPACE", "/workspace"))
 CONFIG_NAME_PATTERN = compile(r"cdso_config[\w.-]*\.ya?ml$", IGNORECASE)
 SKIPPED_DIRECTORIES = {".git", ".venv", "node_modules", "vendor", "__pycache__"}
 SCANNERS = ("grype", "zap", "semgrep", "hadolint", "container_spec")
+MAX_FINDINGS_PER_CALL = 20
 COMPONENT_KEYS = {
     "project_type",
     "dockerfile_folder",
@@ -504,14 +505,18 @@ def get_mitigations(
     team's MITIGATION. Semgrep, hadolint, and container_spec entries return
     the justifications recorded next to each exclusion, including comments,
     with the files they name. Every entry lists formatting problems that
-    would affect pasting a corrected statement back into the config. Request
-    findings in batches when a component has many mitigations.
+    would affect pasting a corrected statement back into the config.
+
+    One call returns at most 20 findings, which keeps each response small
+    enough for the agent's model limits. When a component has more, pass
+    finding_ids in batches of up to 20, using the IDs from list_components.
 
     Args:
         config_path: Workspace-relative path returned by find_cdso_configs.
         component: Component name returned by list_components.
         finding_ids: Finding IDs to read, such as CVE-2025-59375, a semgrep
-            rule ID, or a hadolint code. Reads every finding when omitted.
+            rule ID, or a hadolint code. At most 20 per call. Reads every
+            finding when omitted, if the component has 20 or fewer.
         scanner: One of "grype", "zap", "semgrep", "hadolint", or
             "container_spec" (base-image exceptions).
 
@@ -522,8 +527,8 @@ def get_mitigations(
     Raises:
         TypeError: If the config is not a YAML mapping.
         ValueError: If the config path is not a cDSO config in the workspace,
-            the scanner or component does not exist, or a finding ID has no
-            mitigation.
+            the scanner or component does not exist, a finding ID has no
+            mitigation, or the call would return more than 20 findings.
     """
     if scanner not in SCANNERS:
         raise ValueError(f"Scanner {scanner!r} is not one of {SCANNERS}.")
@@ -534,6 +539,14 @@ def get_mitigations(
         raise ValueError(f"Component {component!r} does not exist in the config.")
 
     mitigations = read_mitigations(section, get_node(root, component), lines, scanner)
+
+    requested_count = len(mitigations if finding_ids is None else finding_ids)
+    if requested_count > MAX_FINDINGS_PER_CALL:
+        raise ValueError(
+            f"This call would return {requested_count} {scanner} findings. Pass "
+            f"finding_ids in batches of at most {MAX_FINDINGS_PER_CALL}, using "
+            "the IDs from list_components."
+        )
 
     if finding_ids is None:
         return list(mitigations.values())
