@@ -14,6 +14,12 @@ advisories:
       - pkg:apk/alpine/busybox@1.37.0-r31
       - pkg:apk/alpine/busybox-binsh@1.37.0-r31
       - pkg:apk/alpine/ssl_client@1.37.0-r31
+  - vulnerability: CVE-2026-12345
+    status: not_affected
+    justification: vulnerable_code_not_in_execute_path
+    impact_statement: The tempfile.TemporaryDirectory class is included in the Python standard library, but this service never creates a temporary directory. Its own code does not use tempfile, and the installed dependencies that do (the Agent Governance Toolkit's OPA and Cedar CLI backends, mTLS helper, and Docker executor, plus griffe and click test helpers) are not called by this service, which loads only YAML policies.
+    products:
+      - pkg:apk/alpine/python3@3.14.8-r0
   - vulnerability: CVE-2026-87910
     status: not_affected
     justification: vulnerable_code_not_in_execute_path
