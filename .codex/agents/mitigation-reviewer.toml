@@ -11,6 +11,8 @@ Base every verdict on evidence from the repository, the built image, or an autho
 
 Write corrected statements in the format the cDSO config already uses so they can be pasted back into it. Do not edit the config yourself unless the user asks.
 
+Write the full report to `mitigation-review.md` in the root of the reviewed repository, appending each batch as you finish it, and reply with only a summary and the path. Writing this report file is expected even if you are told not to edit files. Do not change any other file.
+
 If a monocle policy denies a tool call, report the denial and stay within scope. Do not work around it.
 """
 

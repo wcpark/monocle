@@ -12,7 +12,14 @@ from yaml import MappingNode, Node, ScalarNode, SequenceNode, compose, safe_load
 WORKSPACE = Path(environ.get("MONOCLE_WORKSPACE", "/workspace"))
 CONFIG_NAME_PATTERN = compile(r"cdso_config[\w.-]*\.ya?ml$", IGNORECASE)
 SKIPPED_DIRECTORIES = {".git", ".venv", "node_modules", "vendor", "__pycache__"}
-SCANNERS = ("grype", "zap", "semgrep", "hadolint", "container_spec")
+SCANNERS = (
+    "grype",
+    "zap",
+    "semgrep",
+    "semgrep_ignore",
+    "hadolint",
+    "container_spec",
+)
 MAX_FINDINGS_PER_CALL = 20
 COMPONENT_KEYS = {
     "project_type",
@@ -37,8 +44,11 @@ CONFIG_METADATA_KEYS = (
     "deployment_level",
     "sdd_path",
 )
-DESCRIPTION_LABEL = compile(r"\bDESCRIPTION\b\s*:?")
-MITIGATION_LABEL = compile(r"\bMITIGA[A-Z]*\b\s*:?")
+# Labels are matched in any letter case when a colon follows, because configs
+# use both "DESCRIPTION:" and "Description:". Without a colon, only uppercase
+# counts, so the words "description" and "mitigation" in prose are not labels.
+DESCRIPTION_LABEL = compile(r"(?i:\bdescription\s*:)|\bDESCRIPTION\b")
+MITIGATION_LABEL = compile(r"(?i:\bmitiga[a-z]*\s*:)|\bMITIGA[A-Z]*\b")
 COMMENT_LABEL = compile(r"^(Files?|Rules?|Justification)\s*:\s*(.*)$", IGNORECASE)
 DECORATIVE_COMMENT = compile(r"^(#+\s*-{3,}.*|###.*)$")
 RULE_ID_PATTERN = compile(r"^[A-Za-z][\w-]*(?:\.[\w-]+){2,}$")
@@ -158,6 +168,9 @@ def get_raw_mitigations(section: dict, scanner: str) -> dict[str, str]:
 def parse_mitigation(finding_id: str, text: str) -> dict:
     """Split a mitigation text into its DESCRIPTION and MITIGATION parts.
 
+    Labels may be in any letter case. A misspelled label or one without its
+    colon is reported as a format issue, but letter case is not.
+
     Args:
         finding_id: The finding the mitigation covers.
         text: The raw mitigation text from the config.
@@ -180,7 +193,7 @@ def parse_mitigation(finding_id: str, text: str) -> dict:
         format_issues.append("Missing the 'DESCRIPTION:' label.")
     if not mitigation_match:
         format_issues.append("Missing the 'MITIGATION:' label.")
-    elif mitigation_match.group().replace(" ", "") != "MITIGATION:":
+    elif mitigation_match.group().replace(" ", "").upper() != "MITIGATION:":
         label = mitigation_match.group().strip()
         format_issues.append(f"Malformed label {label!r}; expected 'MITIGATION:'.")
 
@@ -421,6 +434,8 @@ def read_mitigations(
             lines,
             get_node(node, "semgrep", "exclusions"),
         )
+    if scanner == "semgrep_ignore":
+        return read_commented_mitigations(lines, get_node(node, "semgrep", "ignore"))
     if scanner == "hadolint":
         return read_commented_mitigations(lines, get_node(node, "hadolint", "ignores"))
 
@@ -502,7 +517,8 @@ def get_mitigations(
     """Read a component's mitigation statements from a cDSO config.
 
     Grype and ZAP statements are split into the advisory DESCRIPTION and the
-    team's MITIGATION. Semgrep, hadolint, and container_spec entries return
+    team's MITIGATION. Semgrep rule exclusions, semgrep path ignores,
+    hadolint ignores, and container_spec entries return
     the justifications recorded next to each exclusion, including comments,
     with the files they name. Every entry lists formatting problems that
     would affect pasting a corrected statement back into the config.
@@ -517,7 +533,8 @@ def get_mitigations(
         finding_ids: Finding IDs to read, such as CVE-2025-59375, a semgrep
             rule ID, or a hadolint code. At most 20 per call. Reads every
             finding when omitted, if the component has 20 or fewer.
-        scanner: One of "grype", "zap", "semgrep", "hadolint", or
+        scanner: One of "grype", "zap", "semgrep" (excluded rules),
+            "semgrep_ignore" (paths semgrep does not scan), "hadolint", or
             "container_spec" (base-image exceptions).
 
     Returns:

@@ -1,7 +1,7 @@
 # `monocle`
 [![CI Pipeline](https://github.com/wcpark/monocle/actions/workflows/ci.yml/badge.svg)](https://github.com/wcpark/monocle/actions/workflows/ci.yml)  
 
-Monocle is a Python MCP server with Microsoft's [Agent Governance Toolkit (AGT)](https://github.com/microsoft/agent-governance-toolkit) built in. It exposes tools and a skill that agents use to review the vulnerability mitigation statements in a tenant repository's cDSO config (`cdso_config.yml`) and correct the ones that are not true. It covers Grype and ZAP mitigations, semgrep exclusions, hadolint ignores, and `container_spec` base-image exceptions.
+Monocle is a Python MCP server with Microsoft's [Agent Governance Toolkit (AGT)](https://github.com/microsoft/agent-governance-toolkit) built in. It exposes tools and a skill that agents use to review the vulnerability mitigation statements in a tenant repository's cDSO config (`cdso_config.yml`) and correct the ones that are not true. It covers Grype and ZAP mitigations, semgrep rule exclusions and path ignores, hadolint ignores, and `container_spec` base-image exceptions.
 
 Monocle was created from the [cookiecutter-fastmcp](https://github.com/deathlabs/cookiecutter-fastmcp) template.
 
@@ -70,7 +70,7 @@ Enter this prompt into the Codex extension.
 
 By default, the agent reviews every component in the config and every mitigation type. To narrow the review, name what you want, for example "only the Grype mitigations for the backend component".
 
-The agent reports a verdict for each mitigation (`supported`, `needs revision`, `not supported`, or `unverified`), the evidence behind it, and corrected statements in cDSO format that can be pasted back into the config. Build the component's container image first so the agent can check what is installed in it. Otherwise, it writes `check-<finding>.sh` scripts for you to run.
+The agent writes its full report to `mitigation-review.md` in the root of the reviewed repository and replies with a summary. The report gives a verdict for each mitigation (`supported`, `needs revision`, `not supported`, or `unverified`), the evidence behind it, and corrected statements in cDSO format that can be pasted back into the config. The file is not meant to be committed. Build the component's container image first so the agent can check what is installed in it. Otherwise, it writes `check-<finding>.sh` scripts for you to run.
 
 ### Try It Without a Tenant Repository
 
