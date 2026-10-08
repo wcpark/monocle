@@ -28,12 +28,17 @@ sample_service:
     - CVE-0000-0001: "DESCRIPTION: A sample flaw in libsample XML parsing. MITIGATION: This container does not accept XML input. Therefore, this is not applicable."
     - CVE-0000-0002: "DESCRIPTION: A sample flaw in a Windows path check. MITIGAION: The container runs on Linux. Therefore, this is not applicable."
     - CVE-0000-0003: "DESCRIPTION: A sample flaw with no mitigation label."
+    - CVE-0000-0004: "Description: A sample flaw with no upstream mitigation available. Mitigation: The vulnerable parser is not installed."
   zap:
     mitigations:
       ZAP_00001: >-
         "DESCRIPTION: A sample header finding. MITIGATION: The header is set by the ingress gateway."
   semgrep:
     exclusions: *sample_semgrep_exclusions
+    ignore:
+      # Generated database migrations.
+      - "services/sample/migrations/**"
+      - "services/sample/main.py"
   hadolint:
     ignores:
       - DL3008 # Pinned by the approved base image.

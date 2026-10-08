@@ -86,9 +86,10 @@ async def main() -> None:
             for scanner, finding_ids in component["findings"].items()
         }
         expected_counts = {
-            "grype": 3,
+            "grype": 4,
             "zap": 1,
             "semgrep": 2,
+            "semgrep_ignore": 2,
             "hadolint": 1,
             "container_spec": 2,
         }
@@ -106,6 +107,12 @@ async def main() -> None:
         assert mitigations["CVE-0000-0002"]["mitigation"].startswith("The"), parse_error
         assert mitigations["CVE-0000-0002"]["format_issues"], parse_error
         assert mitigations["CVE-0000-0003"]["format_issues"], parse_error
+        mixed_case = mitigations["CVE-0000-0004"]
+        assert mixed_case["format_issues"] == [], parse_error
+        assert mixed_case["description"].endswith("mitigation available."), parse_error
+        assert mixed_case["mitigation"] == "The vulnerable parser is not installed.", (
+            parse_error
+        )
         print(f" {GREEN}✔{RESET} The {SERVER} parsed and checked mitigations")
 
         # Test 7: the gateway policy must refuse paths that leave the workspace
@@ -183,6 +190,7 @@ async def main() -> None:
 
         # Test 11: the server must read hadolint and base-image justifications.
         for scanner, finding_id, prefix in (
+            ("semgrep_ignore", "services/sample/migrations/**", "Generated"),
             ("hadolint", "DL3008", "Pinned"),
             ("container_spec", "registry.example/sample/builder:v1.0.0", "The builder"),
             ("container_spec", "non_minimized", "The service"),
@@ -202,6 +210,21 @@ async def main() -> None:
         print(
             f" {GREEN}✔{RESET} The {SERVER} parsed hadolint and base-image exceptions"
         )
+
+        # Test 12: the server must refuse to return too many findings at once.
+        result = await client.call_tool(
+            "get_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "component": FIXTURE_COMPONENT,
+                "finding_ids": [f"CVE-0000-{number:04}" for number in range(21)],
+            },
+            raise_on_error=False,
+        )
+        batch_error = f"The {SERVER} returned more than 20 findings in one call."
+        assert result.is_error, batch_error
+        assert "batches of at most 20" in result.content[0].text, batch_error
+        print(f" {GREEN}✔{RESET} The {SERVER} refused an oversized batch")
 
     print(f"[+] The {SERVER} is up-up")
 
