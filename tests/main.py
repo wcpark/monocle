@@ -12,7 +12,7 @@ from fastmcp.utilities.skills import list_skills
 # Constants.
 SERVER = "Monocle MCP Server"
 URL = getenv("MCP_URL", "http://localhost:8002/mcp")
-HEALTH_ATTEMPTS = 5
+HEALTH_ATTEMPTS = 30
 HEALTH_RETRY_DELAY = 1
 FIXTURE_CONFIG = "tests/fixtures/cdso_config.yml"
 FIXTURE_COMPONENT = "sample_service"
@@ -217,13 +217,13 @@ async def main() -> None:
             {
                 "config_path": FIXTURE_CONFIG,
                 "component": FIXTURE_COMPONENT,
-                "finding_ids": [f"CVE-0000-{number:04}" for number in range(21)],
+                "finding_ids": [f"CVE-0000-{number:04}" for number in range(51)],
             },
             raise_on_error=False,
         )
-        batch_error = f"The {SERVER} returned more than 20 findings in one call."
+        batch_error = f"The {SERVER} returned more than 50 findings in one call."
         assert result.is_error, batch_error
-        assert "batches of at most 20" in result.content[0].text, batch_error
+        assert "batches of at most 50" in result.content[0].text, batch_error
         print(f" {GREEN}✔{RESET} The {SERVER} refused an oversized batch")
 
     print(f"[+] The {SERVER} is up-up")

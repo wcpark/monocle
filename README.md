@@ -68,9 +68,24 @@ Enter this prompt into the Codex extension.
 
 > Have @mitigation-reviewer review the mitigations in cdso_config.yml.
 
-By default, the agent reviews every component in the config and every mitigation type. To narrow the review, name what you want, for example "only the Grype mitigations for the backend component".
+By default, the agent triages the whole config. It groups mitigations that make the same claim, checks each claim once, and examines in depth only the groups that look wrong or weak. You can ask for a different review instead.
 
-The agent writes its full report to `mitigation-review.md` in the root of the reviewed repository and replies with a summary. The report gives a verdict for each mitigation (`supported`, `needs revision`, `not supported`, or `unverified`), the evidence behind it, and corrected statements in cDSO format that can be pasted back into the config. The file is not meant to be committed. Build the component's container image first so the agent can check what is installed in it. Otherwise, it writes `check-<finding>.sh` scripts for you to run.
+| To review | Add to the prompt |
+|---|---|
+| Only what changed on your branch | "Review only the mitigations that changed since main." |
+| Everything, in depth (slow on a large config) | "Do a full review." |
+| Part of the config | "Only the Grype mitigations for the backend component." |
+
+The agent writes its full report to `mitigation-review.md` in the root of the reviewed repository and replies with a summary. The report gives a verdict for each mitigation, the evidence behind it, and corrected statements in cDSO format that can be pasted back into the config.
+
+| Verdict | Meaning |
+|---|---|
+| `supported` | Examined in depth, and the evidence backs it. |
+| `passed triage` | Quick checks agree with it, but it was not examined in depth. |
+| `needs revision` | The conclusion holds, but the statement is wrong or incomplete. |
+| `not supported` | The evidence contradicts it, or there is no justification. |
+| `unverified` | It could not be checked; the report says what would settle it. |
+The report file is not meant to be committed. Build the component's container image first so the agent can check what is installed in it. Otherwise, it writes `check-<group>.sh` scripts for you to run.
 
 ### Try It Without a Tenant Repository
 
