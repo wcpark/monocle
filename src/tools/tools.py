@@ -20,7 +20,7 @@ SCANNERS = (
     "hadolint",
     "container_spec",
 )
-MAX_FINDINGS_PER_CALL = 20
+MAX_FINDINGS_PER_CALL = 50
 COMPONENT_KEYS = {
     "project_type",
     "dockerfile_folder",
@@ -523,16 +523,16 @@ def get_mitigations(
     with the files they name. Every entry lists formatting problems that
     would affect pasting a corrected statement back into the config.
 
-    One call returns at most 20 findings, which keeps each response small
+    One call returns at most 50 findings, which keeps each response small
     enough for the agent's model limits. When a component has more, pass
-    finding_ids in batches of up to 20, using the IDs from list_components.
+    finding_ids in batches of up to 50, using the IDs from list_components.
 
     Args:
         config_path: Workspace-relative path returned by find_cdso_configs.
         component: Component name returned by list_components.
         finding_ids: Finding IDs to read, such as CVE-2025-59375, a semgrep
-            rule ID, or a hadolint code. At most 20 per call. Reads every
-            finding when omitted, if the component has 20 or fewer.
+            rule ID, or a hadolint code. At most 50 per call. Reads every
+            finding when omitted, if the component has 50 or fewer.
         scanner: One of "grype", "zap", "semgrep" (excluded rules),
             "semgrep_ignore" (paths semgrep does not scan), "hadolint", or
             "container_spec" (base-image exceptions).
@@ -545,7 +545,7 @@ def get_mitigations(
         TypeError: If the config is not a YAML mapping.
         ValueError: If the config path is not a cDSO config in the workspace,
             the scanner or component does not exist, a finding ID has no
-            mitigation, or the call would return more than 20 findings.
+            mitigation, or the call would return more than 50 findings.
     """
     if scanner not in SCANNERS:
         raise ValueError(f"Scanner {scanner!r} is not one of {SCANNERS}.")
