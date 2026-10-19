@@ -45,3 +45,9 @@ sample_service:
   container_spec:
     allow_from_sources: *sample_allowed_sources
     non_minimized: "The service needs glibc for its native libraries."
+
+sample_proxy:
+  project_type: "container"
+  dockerfile_folder: "services/proxy"
+  mitigations:
+    - CVE-0000-0005: "DESCRIPTION: A sample flaw in a proxy module. MITIGATION: The module is not loaded."

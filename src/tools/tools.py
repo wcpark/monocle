@@ -3,7 +3,9 @@
 # Standard library imports.
 from os import environ, walk
 from pathlib import Path
+from random import Random
 from re import IGNORECASE, compile
+from secrets import token_hex
 
 # Third party imports.
 from yaml import MappingNode, Node, ScalarNode, SequenceNode, compose, safe_load
@@ -577,3 +579,84 @@ def get_mitigations(
         )
 
     return [mitigations[finding_id] for finding_id in finding_ids]
+
+
+def sample_mitigations(
+    config_path: str,
+    sample_size: int = 10,
+    seed: str | None = None,
+    scanner: str | None = None,
+    component: str | None = None,
+) -> dict:
+    """Draw a reproducible random sample of mitigation statements.
+
+    The pool holds every mitigation in the config, in the order the config
+    lists its components, scanners, and findings, and can be narrowed to one
+    scanner or component. Each drawn entry carries its component and scanner
+    plus the same fields get_mitigations returns for that scanner. Drawing
+    more statements than the pool holds returns the whole pool, and an empty
+    pool returns no entries.
+
+    Args:
+        config_path: Workspace-relative path returned by find_cdso_configs.
+        sample_size: Number of statements to draw, between 1 and 50. Draws
+            the whole pool when it is smaller than this.
+        seed: Seed that decides the draw. When omitted, a new seed is
+            generated and returned, and passing it back with the same sample
+            size redraws the same sample from the same config.
+        scanner: One of "grype", "zap", "semgrep" (excluded rules),
+            "semgrep_ignore" (paths semgrep does not scan), "hadolint", or
+            "container_spec" (base-image exceptions). Every scanner with
+            mitigations is sampled when omitted.
+        component: Component name returned by list_components. Every
+            component with mitigations is sampled when omitted.
+
+    Returns:
+        The seed, the number of statements drawn, the size of the pool the
+        sample was drawn from, the filters used, and one entry per drawn
+        statement.
+
+    Raises:
+        TypeError: If the config is not a YAML mapping.
+        ValueError: If the config path is not a cDSO config in the
+            workspace, the scanner or component does not exist, or the
+            sample size is not between 1 and 50.
+    """
+    if scanner is not None and scanner not in SCANNERS:
+        raise ValueError(f"Scanner {scanner!r} is not one of {SCANNERS}.")
+    if not 1 <= sample_size <= MAX_FINDINGS_PER_CALL:
+        raise ValueError(
+            f"Sample size {sample_size} is not between 1 and "
+            f"{MAX_FINDINGS_PER_CALL}. Draw at most {MAX_FINDINGS_PER_CALL} "
+            "statements at a time."
+        )
+
+    config, root, lines = load_config(config_path)
+    sections = {
+        name: (section, get_node(root, name))
+        for name, section in config.items()
+        if is_component(section)
+    }
+    if component is not None and component not in sections:
+        raise ValueError(f"Component {component!r} does not exist in the config.")
+
+    scanner_names = (scanner,) if scanner else SCANNERS
+    pool = []
+    for name, (section, node) in sections.items():
+        if component is not None and name != component:
+            continue
+        for scanner_name in scanner_names:
+            statements = read_mitigations(section, node, lines, scanner_name)
+            for statement in statements.values():
+                pool.append({"component": name, "scanner": scanner_name, **statement})
+
+    used_seed = seed if seed is not None else token_hex(8)
+    entries = Random(used_seed).sample(pool, min(sample_size, len(pool)))
+
+    return {
+        "seed": used_seed,
+        "sample_size": len(entries),
+        "pool_size": len(pool),
+        "filters": {"component": component, "scanner": scanner},
+        "entries": entries,
+    }
