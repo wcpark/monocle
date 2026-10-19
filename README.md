@@ -1,7 +1,7 @@
 # `monocle`
 [![CI Pipeline](https://github.com/wcpark/monocle/actions/workflows/ci.yml/badge.svg)](https://github.com/wcpark/monocle/actions/workflows/ci.yml)  
 
-Monocle is a Python MCP server with Microsoft's [Agent Governance Toolkit (AGT)](https://github.com/microsoft/agent-governance-toolkit) built in. It exposes tools and a skill that agents use to review the vulnerability mitigation statements in a tenant repository's cDSO config (`cdso_config.yml`) and correct the ones that are not true. It covers Grype and ZAP mitigations, semgrep rule exclusions and path ignores, hadolint ignores, and `container_spec` base-image exceptions.
+Monocle is a Python MCP server with Microsoft's [Agent Governance Toolkit (AGT)](https://github.com/microsoft/agent-governance-toolkit) built in. It exposes tools and skills that agents use to review the vulnerability mitigation statements in a tenant repository's cDSO config (`cdso_config.yml`), correct the ones that are not true, and audit a random sample of them by attempting proofs of concept against the built image. It covers Grype and ZAP mitigations, semgrep rule exclusions and path ignores, hadolint ignores, and `container_spec` base-image exceptions.
 
 Monocle was created from the [cookiecutter-fastmcp](https://github.com/deathlabs/cookiecutter-fastmcp) template.
 
@@ -93,6 +93,28 @@ Run `make run` in the monocle folder to start monocle against its own sample con
 
 > Have @mitigation-reviewer review the mitigations in tests/fixtures/cdso_config.yml.
 
+## Audit a Sample of Mitigations
+
+An audit tests a random sample of the mitigation statements by trying to exploit, inside each component's built image, exactly what the statements claim cannot be exploited. Copy the `mitigation-auditor` agent to your Codex agents folder, the same way as the reviewer.
+
+```bash
+cp .codex/agents/mitigation-auditor.toml ~/.codex/agents/
+```
+
+Then enter a prompt like the one below into the Codex extension.
+
+> Have @mitigation-auditor audit a sample of 10 Grype mitigations in cdso_config.yml.
+
+The agent draws the sample before reading any statement and records the seed in its report, so anyone can redraw the same sample to check it. Monocle accepts any seed, so it cannot stop an agent from redrawing until it gets an easier sample; the agent is instructed to draw once. To fix the sample yourself, give the seed in your prompt, for example "use seed 2026-10-19". It writes its report to `mitigation-audit.md` in the root of the audited repository.
+
+| Verdict | Meaning |
+|---|---|
+| `upheld` | The exploit attempt agreed with the statement. |
+| `refuted` | A proof of concept demonstrated the vulnerability in the image. |
+| `inconclusive` | No image or no proof of concept; the report says what would settle it. |
+
+The proofs of concept run in the agent's own environment against containers it builds or pulls locally, never against deployed services. Monocle itself stays read-only.
+
 ## Cleaning Up
 
 To stop the MCP server and remove its container and network, enter the command below. This keeps the container image, so monocle starts faster next time. Add `--rmi all` to delete the image too.
@@ -138,6 +160,7 @@ make WORKSPACE=$HOME/repos/tenant-app start-container
 | `find_cdso_configs` | Finds cDSO config files in the mounted repository. |
 | `list_components` | Lists each component's deployment context, mitigated findings by scanner, and skipped scans. |
 | `get_mitigations` | Returns a component's mitigations for one scanner, with any formatting problems. |
+| `sample_mitigations` | Draws a reproducible, seeded random sample of mitigations, with optional component and scanner filters. |
 
 ## Guardrails
 

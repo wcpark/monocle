@@ -12,6 +12,7 @@ allowed_tools:
   - find_cdso_configs
   - list_components
   - get_mitigations
+  - sample_mitigations
 
 blocked_patterns:
   # Parent-directory segments, such as "../cdso_config.yml" or "a/../b".

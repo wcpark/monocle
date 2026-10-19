@@ -118,14 +118,17 @@ async def main() -> None:
         # Test 7: the gateway policy must refuse paths that leave the workspace
         # or do not name a cDSO config.
         for config_path in GATEWAY_BLOCKED_PATHS:
-            result = await client.call_tool(
-                "list_components",
-                {"config_path": config_path},
-                raise_on_error=False,
-            )
-            gateway_error = f"The {SERVER} gateway allowed {config_path!r}."
-            assert result.is_error, gateway_error
-            assert "gateway policy" in result.content[0].text, gateway_error
+            for tool in ("list_components", "sample_mitigations"):
+                result = await client.call_tool(
+                    tool,
+                    {"config_path": config_path},
+                    raise_on_error=False,
+                )
+                gateway_error = (
+                    f"The {SERVER} gateway allowed {config_path!r} in {tool}."
+                )
+                assert result.is_error, gateway_error
+                assert "gateway policy" in result.content[0].text, gateway_error
         print(f" {GREEN}✔{RESET} The {SERVER} gateway refused unsafe config paths")
 
         # Test 8: the tools must refuse a symlink that leaves the workspace,
@@ -225,6 +228,126 @@ async def main() -> None:
         assert result.is_error, batch_error
         assert "batches of at most 50" in result.content[0].text, batch_error
         print(f" {GREEN}✔{RESET} The {SERVER} refused an oversized batch")
+
+        # Test 13: a seeded sample must be reproducible and match
+        # get_mitigations.
+        sample_arguments = {
+            "config_path": FIXTURE_CONFIG,
+            "sample_size": 3,
+            "seed": "audit-seed-1",
+            "scanner": "grype",
+        }
+        result = await client.call_tool("sample_mitigations", sample_arguments)
+        sample = result.data
+        repeat = await client.call_tool("sample_mitigations", sample_arguments)
+        sample_error = f"The {SERVER} sampled mitigations wrongly: {sample}"
+        assert sample["seed"] == "audit-seed-1", sample_error
+        assert sample["pool_size"] == 5, sample_error
+        assert len(sample["entries"]) == 3, sample_error
+        assert sample["entries"] == repeat.data["entries"], sample_error
+        entry = sample["entries"][0]
+        detailed = await client.call_tool(
+            "get_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "component": entry["component"],
+                "scanner": "grype",
+                "finding_ids": [entry["finding_id"]],
+            },
+        )
+        assert entry["mitigation"] == detailed.data[0]["mitigation"], sample_error
+        assert entry["format_issues"] == detailed.data[0]["format_issues"], sample_error
+        print(f" {GREEN}✔{RESET} The {SERVER} drew a reproducible sample")
+
+        # Test 14: a sample drawn without a seed must return a seed that
+        # redraws it.
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "sample_size": 5},
+        )
+        sample = result.data
+        seed_error = f"The {SERVER} did not return a usable seed: {sample}"
+        assert isinstance(sample["seed"], str) and sample["seed"], seed_error
+        assert sample["pool_size"] == 13, seed_error
+        assert len(sample["entries"]) == 5, seed_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "sample_size": 5, "seed": sample["seed"]},
+        )
+        assert sample["entries"] == result.data["entries"], seed_error
+        print(f" {GREEN}✔{RESET} The {SERVER} returned a seed that redraws the sample")
+
+        # Test 15: the sampler must honor filters and reject unknown names.
+        result = await client.call_tool(
+            "sample_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "sample_size": 2,
+                "seed": "audit-seed-2",
+                "component": FIXTURE_COMPONENT,
+            },
+        )
+        filter_error = f"The {SERVER} filtered the sample pool wrongly."
+        assert result.data["pool_size"] == 12, filter_error
+        assert {entry["component"] for entry in result.data["entries"]} == {
+            FIXTURE_COMPONENT
+        }, filter_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "sample_size": 5,
+                "seed": "audit-seed-2",
+                "component": "sample_proxy",
+            },
+        )
+        assert result.data["pool_size"] == 1, filter_error
+        assert result.data["entries"][0]["finding_id"] == "CVE-0000-0005", filter_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "scanner": "nmap"},
+            raise_on_error=False,
+        )
+        assert result.is_error, filter_error
+        assert "is not one of" in result.content[0].text, filter_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "component": "missing_service"},
+            raise_on_error=False,
+        )
+        assert result.is_error, filter_error
+        assert "does not exist in the config" in result.content[0].text, filter_error
+        print(f" {GREEN}✔{RESET} The {SERVER} honored filters and rejected bad names")
+
+        # Test 16: the sampler must refuse sizes outside 1 to 50 and draw the
+        # whole pool when it is smaller than the size.
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "sample_size": 51},
+            raise_on_error=False,
+        )
+        size_error = f"The {SERVER} allowed an invalid sample size."
+        assert result.is_error, size_error
+        assert "between 1 and 50" in result.content[0].text, size_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {"config_path": FIXTURE_CONFIG, "sample_size": 0},
+            raise_on_error=False,
+        )
+        assert result.is_error, size_error
+        result = await client.call_tool(
+            "sample_mitigations",
+            {
+                "config_path": FIXTURE_CONFIG,
+                "sample_size": 10,
+                "seed": "audit-seed-3",
+                "scanner": "grype",
+            },
+        )
+        sample = result.data
+        assert sample["pool_size"] == 5, size_error
+        assert sample["sample_size"] == len(sample["entries"]) == 5, size_error
+        print(f" {GREEN}✔{RESET} The {SERVER} capped sizes and drew small pools whole")
 
     print(f"[+] The {SERVER} is up-up")
 
