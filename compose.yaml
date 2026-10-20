@@ -13,6 +13,8 @@ services:
     environment:
       FASTMCP_PORT: "8002"
       MONOCLE_WORKSPACE: /workspace
+      # Empty keeps the sample draw limit in src/policy.yaml.
+      MONOCLE_SAMPLE_DRAW_LIMIT: ${MONOCLE_SAMPLE_DRAW_LIMIT:-}
     volumes:
       - ${MCP_SERVER_WORKSPACE:-.}:/workspace:ro
     healthcheck:

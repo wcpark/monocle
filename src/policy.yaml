@@ -15,6 +15,19 @@ rules:
     limit: "600/hour"
     description: "Each config tool allows 600 calls per hour."
 
+  # An audit must not redraw its sample until it gets an easier one. Only
+  # sample_mitigations takes sample_size, and FastMCP always passes it, even
+  # when the agent leaves it out. The higher priority makes this the rule
+  # that counts for sample_mitigations instead of limit-config-access. The
+  # limit is shared by every client and also counts redraws that check a
+  # sample with its recorded seed.
+  - name: limit-sample-draws
+    condition: "sample_size.value"
+    action: allow
+    priority: 5
+    limit: "3/hour"
+    description: "Mitigation samples can be drawn at most 3 times per hour."
+
   # The rules below are for a future tool that writes corrected statements
   # back to a cDSO config. They match no current tool. The write tool must:
   #   - take its target as `config_path`, so the gateway's cDSO config path
