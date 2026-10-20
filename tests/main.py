@@ -1,7 +1,9 @@
 """Integration tests for a running Monocle MCP server."""
 
 # Standard library imports.
-from asyncio import run, sleep
+from asyncio import create_subprocess_exec, run, sleep
+from asyncio.subprocess import PIPE
+from json import loads
 from os import getenv
 from pathlib import Path
 
@@ -12,6 +14,9 @@ from fastmcp.utilities.skills import list_skills
 # Constants.
 SERVER = "Monocle MCP Server"
 URL = getenv("MCP_URL", "http://localhost:8002/mcp")
+CONTAINER_NAME = getenv("MCP_CONTAINER", "monocle_mcp")
+AUDIT_LOG_PREFIX = "MONOCLE_AUDIT "
+SAMPLE_DRAW_LIMIT = 15
 HEALTH_ATTEMPTS = 30
 HEALTH_RETRY_DELAY = 1
 FIXTURE_CONFIG = "tests/fixtures/cdso_config.yml"
@@ -348,6 +353,53 @@ async def main() -> None:
         assert sample["pool_size"] == 5, size_error
         assert sample["sample_size"] == len(sample["entries"]) == 5, size_error
         print(f" {GREEN}✔{RESET} The {SERVER} capped sizes and drew small pools whole")
+
+        # Test 17: the policy must stop sample draws at the hourly limit. The
+        # test run raises the limit to SAMPLE_DRAW_LIMIT, and the tests above
+        # have used part of it.
+        draw_arguments = {"config_path": FIXTURE_CONFIG, "seed": "audit-seed-4"}
+        limit_error = f"The {SERVER} did not limit sample draws."
+        for _ in range(SAMPLE_DRAW_LIMIT + 1):
+            result = await client.call_tool(
+                "sample_mitigations",
+                draw_arguments,
+                raise_on_error=False,
+            )
+            if result.is_error:
+                break
+        assert result.is_error, limit_error
+        assert "limit-sample-draws" in result.content[0].text, limit_error
+        print(f" {GREEN}✔{RESET} The {SERVER} stopped sample draws at the limit")
+
+    # Test 18: the server must log an audit record for each call, including
+    # calls the policy denied.
+    process = await create_subprocess_exec(
+        "docker",
+        "logs",
+        CONTAINER_NAME,
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    assert process.returncode == 0, f"Could not read the {CONTAINER_NAME} logs."
+    records = [
+        loads(line.removeprefix(AUDIT_LOG_PREFIX))
+        for line in (stdout + stderr).decode().splitlines()
+        if line.startswith(AUDIT_LOG_PREFIX)
+    ]
+    audit_error = f"The {SERVER} did not write the expected audit records."
+    sample_records = [
+        record for record in records if record["tool_name"] == "sample_mitigations"
+    ]
+    assert any(
+        record["allowed"] and record["parameters"].get("seed") == "audit-seed-1"
+        for record in sample_records
+    ), audit_error
+    assert any(
+        not record["allowed"] and "limit-sample-draws" in record["reason"]
+        for record in sample_records
+    ), audit_error
+    print(f" {GREEN}✔{RESET} The {SERVER} logged audit records")
 
     print(f"[+] The {SERVER} is up-up")
 

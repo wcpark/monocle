@@ -290,6 +290,9 @@ status:
 # Test the container.
 # ---------------------------------------------------------
 
+# The tests draw more mitigation samples than the real limit of 3 per hour.
+test-container: export MONOCLE_SAMPLE_DRAW_LIMIT = 15/hour
+
 .PHONY: test-container
 .SILENT: test-container
 test-container: start-container

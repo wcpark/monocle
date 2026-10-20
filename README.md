@@ -105,7 +105,7 @@ Then enter a prompt like the one below into the Codex extension.
 
 > Have @mitigation-auditor audit a sample of 10 Grype mitigations in cdso_config.yml.
 
-The agent draws the sample before reading any statement and records the seed in its report, so anyone can redraw the same sample to check it. Monocle accepts any seed, so it cannot stop an agent from redrawing until it gets an easier sample; the agent is instructed to draw once. To fix the sample yourself, give the seed in your prompt, for example "use seed 2026-10-19". It writes its report to `mitigation-audit.md` in the root of the audited repository.
+The agent draws the sample before reading any statement and records the seed in its report, so anyone can redraw the same sample to check it. Monocle allows 3 draws per hour, so an agent cannot keep redrawing until it gets an easier sample. To fix the sample yourself, give the seed in your prompt, for example "use seed 2026-10-19". Every draw, with its seed, is recorded in the audit log described under Guardrails.
 
 | Verdict | Meaning |
 |---|---|
@@ -169,9 +169,9 @@ Enforced by monocle:
 - **Read-only access.** The tools cannot write, run commands, or reach the network. The container runs as a non-root user and mounts only the reviewed repository, read-only.
 - **Path checks.** The tools resolve each path and reject files outside the repository, files that are not cDSO configs, and symlinks that leave the repository. Configs are parsed with `yaml.safe_load`.
 - **`src/gateway-policy.yaml`** (Agent Governance Toolkit MCP gateway) allows only the listed tools and blocks `..`, absolute, and non-config paths in tool arguments.
-- **`src/policy.yaml`** (Agent Governance Toolkit) limits each config tool to 600 calls per hour. It also denies removals and requires human approval for a future tool that writes corrected statements back to a config.
+- **`src/policy.yaml`** (Agent Governance Toolkit) limits each config tool to 600 calls per hour and mitigation samples to 3 draws per hour. It also denies removals and requires human approval for a future tool that writes corrected statements back to a config.
+- **Audit log.** Every tool call, and every denial, is written as a line starting with `MONOCLE_AUDIT` to the server's output. View it with `docker logs monocle_mcp | grep MONOCLE_AUDIT`. Docker keeps it until the container is removed.
 
 Not enforced:
 
 - **The agent's own actions.** Commands the agent runs in its shell are governed by the agent's sandbox and approval settings, not by monocle.
-- **Audit history.** Tool calls are audited in memory only, and the record is lost when the container restarts.
