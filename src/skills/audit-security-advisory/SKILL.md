@@ -1,5 +1,5 @@
 ---
-name: audit-mitigations
+name: audit-security-advisory
 description: Audit a random sample of the mitigation statements in a tenant repository's cDSO config by attempting a minimal proof of concept against each component's built container image. Draws a reproducible seeded sample with the sample_mitigations tool, gets the image, and tries to trigger the vulnerability each statement claims is not exploitable. Use when an auditor asks to audit, spot-check, or sample mitigations, or to verify false-positive or not-exploitable claims by exploitation.
 ---
 
@@ -65,7 +65,7 @@ Write a minimal proof of concept that reaches the code path the statement claims
 
 ### 7. Report
 
-Write the report to `mitigation-audit.md` as you go, one entry at a time, as described under Report Format, and reply with only the summary and the path.
+Write the report to `security-advisory-audit.md` as you go, one entry at a time, as described under Report Format, and reply with only the summary and the path.
 
 ## Verdicts
 
@@ -86,7 +86,7 @@ An audit verdict says what an exploit attempt showed. It does not judge wording 
 
 ## Report Format
 
-Write the full report to `mitigation-audit.md` in the root of the audited repository, replacing any earlier copy. Writing this file is part of the audit and is expected even when you are told not to change the repository's files. Do not change any other file.
+Write the full report to `security-advisory-audit.md` in the root of the audited repository, replacing any earlier copy. Writing this file is part of the audit and is expected even when you are told not to change the repository's files. Do not change any other file.
 
 Write to the file as you go, so an audit keeps its progress if it is interrupted. When the audit is complete, add an overall summary at the top with the sample parameters, the count of each verdict, and the refuted statements first, since they are the audit's findings.
 

@@ -95,15 +95,15 @@ Run `make run` in the monocle folder to start monocle against its own sample con
 
 ## Audit a Sample of Mitigations
 
-An audit tests a random sample of the mitigation statements by trying to exploit, inside each component's built image, exactly what the statements claim cannot be exploited. Copy the `mitigation-auditor` agent to your Codex agents folder, the same way as the reviewer.
+An audit tests a random sample of the mitigation statements by trying to exploit, inside each component's built image, exactly what the statements claim cannot be exploited. Copy the `security-advisory-auditor` agent to your Codex agents folder, the same way as the reviewer.
 
 ```bash
-cp .codex/agents/mitigation-auditor.toml ~/.codex/agents/
+cp .codex/agents/security-advisory-auditor.toml ~/.codex/agents/
 ```
 
 Then enter a prompt like the one below into the Codex extension.
 
-> Have @mitigation-auditor audit a sample of 10 Grype mitigations in cdso_config.yml.
+> Have @security-advisory-auditor audit a sample of 10 Grype mitigations in cdso_config.yml.
 
 The agent draws the sample before reading any statement and records the seed in its report, so anyone can redraw the same sample to check it. Monocle allows 3 draws per hour, so an agent cannot keep redrawing until it gets an easier sample. To fix the sample yourself, give the seed in your prompt, for example "use seed 2026-10-19". Every draw, with its seed, is recorded in the audit log described under Guardrails.
 
